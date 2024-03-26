@@ -11,19 +11,22 @@ import (
 // Border contains a series of values which comprise the various parts of a
 // border.
 type Border struct {
-	Top          string
-	Bottom       string
-	Left         string
-	Right        string
-	TopLeft      string
-	TopRight     string
-	BottomLeft   string
-	BottomRight  string
-	MiddleLeft   string
-	MiddleRight  string
-	Middle       string
-	MiddleTop    string
-	MiddleBottom string
+	Top           string
+	Bottom        string
+	Left          string
+	Right         string
+	TopLeft       string
+	TopRight      string
+	BottomLeft    string
+	BottomRight   string
+	MiddleLeft    string
+	MiddleRight   string
+	Middle        string
+	MiddleTop     string
+	MiddleBottom  string
+	Title         string
+	TitlePosition Position
+	TitleAlign    Position
 }
 
 // GetTopSize returns the width of the top border. If borders contain runes of
@@ -52,6 +55,16 @@ func (b Border) GetBottomSize() int {
 // left edge, 0 is returned.
 func (b Border) GetLeftSize() int {
 	return getBorderEdgeWidth(b.TopLeft, b.Left, b.BottomLeft)
+}
+
+// GetTitle returns the title of the border. If no title exists, "" is returned.
+func (b Border) GetTitle() string {
+	return b.Title
+}
+
+// GetTitleOffset returns the horizontal position of the title.
+func (b Border) GetTitlePosition() Position {
+	return b.TitlePosition
 }
 
 func getBorderEdgeWidth(borderParts ...string) (maxWidth int) {
@@ -226,6 +239,14 @@ func HiddenBorder() Border {
 	return hiddenBorder
 }
 
+// TitledBorder sets text inline within the given border border
+func TitledBorder(b Border, s string) Border {
+	b.Title = s
+	b.TitlePosition = Top
+	b.TitleAlign = Center
+	return b
+}
+
 func (s Style) applyBorder(str string) string {
 	var (
 		topSet    = s.isSet(borderTopKey)
@@ -327,7 +348,12 @@ func (s Style) applyBorder(str string) string {
 
 	// Render top
 	if hasTop {
-		top := renderHorizontalEdge(border.TopLeft, border.Top, border.TopRight, width)
+		var top string
+		if border.TitlePosition == Top {
+			top = renderHorizontalEdge(border.TopLeft, border.Top, border.TopRight, border.Title, border.TitleAlign, width)
+		} else {
+			top = renderHorizontalEdge(border.TopLeft, border.Top, border.TopRight, "", border.TitleAlign, width)
+		}
 		top = s.styleBorder(top, topFG, topBG)
 		out.WriteString(top)
 		out.WriteRune('\n')
@@ -365,7 +391,12 @@ func (s Style) applyBorder(str string) string {
 
 	// Render bottom
 	if hasBottom {
-		bottom := renderHorizontalEdge(border.BottomLeft, border.Bottom, border.BottomRight, width)
+		var bottom string
+		if border.TitlePosition == Bottom {
+			bottom = renderHorizontalEdge(border.BottomLeft, border.Bottom, border.BottomRight, border.Title, border.TitleAlign, width)
+		} else {
+			bottom = renderHorizontalEdge(border.BottomLeft, border.Bottom, border.BottomRight, "", border.TitleAlign, width)
+		}
 		bottom = s.styleBorder(bottom, bottomFG, bottomBG)
 		out.WriteRune('\n')
 		out.WriteString(bottom)
@@ -375,7 +406,11 @@ func (s Style) applyBorder(str string) string {
 }
 
 // Render the horizontal (top or bottom) portion of a border.
-func renderHorizontalEdge(left, middle, right string, width int) string {
+func renderHorizontalEdge(left, middle, right, title string, pos Position, width int) string {
+	if width < 1 {
+		return ""
+	}
+
 	if middle == "" {
 		middle = " "
 	}
@@ -384,6 +419,18 @@ func renderHorizontalEdge(left, middle, right string, width int) string {
 	rightWidth := ansi.PrintableRuneWidth(right)
 
 	runes := []rune(middle)
+	if pos > 0 && title != "" {
+		titleRunes := []rune(title)
+		if len(titleRunes) > width {
+			titleRunes = titleRunes[:width]
+		}
+		for i, char := range titleRunes {
+			if i < int(pos.value()) {
+				continue
+			}
+			runes[i] = char
+		}
+	}
 	j := 0
 
 	out := strings.Builder{}
