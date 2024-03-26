@@ -407,10 +407,6 @@ func (s Style) applyBorder(str string) string {
 
 // Render the horizontal (top or bottom) portion of a border.
 func renderHorizontalEdge(left, middle, right, title string, pos Position, width int) string {
-	if width < 1 {
-		return ""
-	}
-
 	if middle == "" {
 		middle = " "
 	}
